@@ -130,7 +130,7 @@ namespace TrayApp.FolderMonitor
                     // 稍后重试检查
                     System.Threading.Tasks.Task.Run(async () =>
                     {
-                        await System.Threading.Tasks.Task.Delay(1000);
+                        await System.Threading.Tasks.Task.Delay(1000).ConfigureAwait(false);
                         if (IsFileReady(e.FullPath))
                         {
                             AddFileToBatch(e.FullPath);
@@ -139,7 +139,7 @@ namespace TrayApp.FolderMonitor
                         {
                             _logger.Warning($"无法访问文件: {e.FullPath}");
                         }
-                    });
+                    }).ConfigureAwait(false);
                     return;
                 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace TrayApp.Core
 {
@@ -58,7 +59,7 @@ namespace TrayApp.Core
         int GetBatchTimeoutSeconds();
         List<string> GetMonitoredFileTypes();
         List<string> GetHiddenPrinters();
-        FileTypeAssociation GetFileTypeAssociation(string fileExtension);
+        FileTypeAssociation? GetFileTypeAssociation(string fileExtension);
         TaskHistorySettings GetTaskHistorySettings();
     }
 
@@ -127,8 +128,61 @@ namespace TrayApp.Core
     /// </summary>
     public interface ILogger
     {
+        void Debug(string message);
         void Info(string message);
         void Warning(string message);
         void Error(string message, Exception? ex = null);
+    }
+
+    /// <summary>
+    /// 文件日志实现
+    /// </summary>
+    public class FileLogger : ILogger
+    {
+        private readonly string _logPath;
+        private readonly object _lockObj = new object();
+
+        public FileLogger()
+        {
+            _logPath = Path.Combine("logs", $"app_{DateTime.Now:yyyyMMdd}.log");
+            Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
+        }
+
+        public void Debug(string message)
+        {
+            WriteLog("DEBUG", message);
+        }
+
+        public void Info(string message)
+        {
+            WriteLog("INFO", message);
+        }
+
+        public void Warning(string message)
+        {
+            WriteLog("WARNING", message);
+        }
+
+        public void Error(string message, Exception? ex = null)
+        {
+            var errorMessage = ex != null ? $"{message}\n{ex}" : message;
+            WriteLog("ERROR", errorMessage);
+        }
+
+        private void WriteLog(string level, string message)
+        {
+            lock (_lockObj)
+            {
+                try
+                {
+                    var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}";
+                    File.AppendAllText(_logPath, logEntry + Environment.NewLine);
+                }
+                catch
+                {
+                    // 忽略日志写入失败，避免循环错误
+                }
+            }
+        }
     }
 }

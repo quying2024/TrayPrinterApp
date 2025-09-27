@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TrayApp.Core;
+using iTextSharp.text.pdf;
 
 namespace TrayApp.Printing
 {
@@ -362,27 +363,44 @@ namespace TrayApp.Printing
 
         public int CountPages(string filePath)
         {
+            Microsoft.Office.Interop.Word.Application? wordApp = null;
+            Microsoft.Office.Interop.Word.Document? doc = null;
+            
             try
             {
                 // 使用Microsoft.Office.Interop.Word库
-                var wordApp = new Microsoft.Office.Interop.Word.Application();
+                wordApp = new Microsoft.Office.Interop.Word.Application();
                 wordApp.Visible = false;
+                wordApp.DisplayAlerts = Microsoft.Office.Interop.Word.WdAlertLevel.wdAlertsNone;
 
-                var doc = wordApp.Documents.Open(
+                doc = wordApp.Documents.Open(
                     fileName: filePath,
                     ReadOnly: true
                 );
 
                 int pages = doc.ComputeStatistics(Microsoft.Office.Interop.Word.WdStatistic.wdStatisticPages);
-                doc.Close();
-                wordApp.Quit();
-
                 return pages;
             }
             catch (Exception ex)
             {
                 _logger.Error($"获取Word页码失败: {filePath}", ex);
                 return 1; // 出错时默认按1页计算
+            }
+            finally
+            {
+                // 正确释放COM对象
+                try
+                {
+                    doc?.Close(false);
+                    wordApp?.Quit(false);
+                    
+                    if (doc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
+                    if (wordApp != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error("释放Word COM对象失败", ex);
+                }
             }
         }
     }

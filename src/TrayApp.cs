@@ -143,11 +143,11 @@ namespace TrayApp
 
             _logger.Info($"接收到文件批次: {e.FilePaths.Count} 个文件");
             
-            // 在UI线程中处理
-            Application.Invoke((Action)(() =>
+            // 使用Task.Run在后台线程处理，避免跨线程调用问题
+            Task.Run(() =>
             {
                 ProcessFileBatch(e.FilePaths);
-            }));
+            });
         }
 
         /// <summary>
@@ -253,10 +253,21 @@ namespace TrayApp
             {
                 if (createdNew)
                 {
-                    // 创建并启动应用核心
-                    using (var appCore = new AppCore())
+                    try
                     {
+                        // 创建并启动应用核心
+                        var appCore = new AppCore();
                         appCore.Start();
+                        
+                        // 启动Windows Forms消息循环
+                        Application.Run();
+                        
+                        // 清理资源
+                        appCore.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"应用启动失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
@@ -264,60 +275,6 @@ namespace TrayApp
                     // 已经有实例在运行，显示提示
                     MessageBox.Show("打印店自动打印系统已在运行中", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            }
-        }
-    }
-
-    /// <summary>
-    /// 文件日志实现
-    /// </summary>
-    public class FileLogger : ILogger
-    {
-        private readonly string _logFilePath;
-        private readonly object _lockObj = new object();
-
-        public FileLogger()
-        {
-            // 默认日志路径（实际应用中会从配置加载）
-            _logFilePath = "app.log";
-        }
-
-        public void Info(string message)
-        {
-            WriteLog("INFO", message);
-        }
-
-        public void Warning(string message)
-        {
-            WriteLog("WARN", message);
-        }
-
-        public void Error(string message, Exception? ex = null)
-        {
-            if (ex != null)
-            {
-                message += $"\n异常信息: {ex}";
-            }
-            WriteLog("ERROR", message);
-        }
-
-        private void WriteLog(string level, string message)
-        {
-            try
-            {
-                string logLine = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}";
-                
-                lock (_lockObj)
-                {
-                    System.IO.File.AppendAllText(_logFilePath, logLine + Environment.NewLine);
-                }
-                
-                // 同时输出到控制台
-                Console.WriteLine(logLine);
-            }
-            catch
-            {
-                // 日志记录失败时不抛出异常
             }
         }
     }
