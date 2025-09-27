@@ -1,0 +1,134 @@
+using System;
+using System.Collections.Generic;
+
+namespace TrayApp.Core
+{
+    /// <summary>
+    /// 应用配置模型
+    /// </summary>
+    public class AppSettings
+    {
+        public MonitoringSettings Monitoring { get; set; } = new MonitoringSettings();
+        public PrinterManagementSettings PrinterManagement { get; set; } = new PrinterManagementSettings();
+        public Dictionary<string, FileTypeAssociation> FileTypeAssociations { get; set; } = new Dictionary<string, FileTypeAssociation>();
+        public TaskHistorySettings TaskHistory { get; set; } = new TaskHistorySettings();
+        public LoggingSettings Logging { get; set; } = new LoggingSettings();
+    }
+
+    public class MonitoringSettings
+    {
+        public string WatchPath { get; set; } = string.Empty;
+        public int BatchTimeoutSeconds { get; set; } = 3;
+        public List<string> FileTypes { get; set; } = new List<string>();
+    }
+
+    public class PrinterManagementSettings
+    {
+        public List<string> HiddenPrinters { get; set; } = new List<string>();
+        public string DisplayOrder { get; set; } = "UsageFrequency";
+    }
+
+    public class FileTypeAssociation
+    {
+        public string ExecutorPath { get; set; } = string.Empty;
+        public string Arguments { get; set; } = string.Empty;
+        public string PageCounterType { get; set; } = string.Empty;
+    }
+
+    public class TaskHistorySettings
+    {
+        public int MaxRecords { get; set; } = 5;
+        public string StoragePath { get; set; } = "task_history.json";
+    }
+
+    public class LoggingSettings
+    {
+        public string LogLevel { get; set; } = "Info";
+        public string LogFilePath { get; set; } = "app.log";
+    }
+
+    /// <summary>
+    /// 配置服务接口
+    /// </summary>
+    public interface IConfigurationService
+    {
+        AppSettings GetSettings();
+        void SaveSettings(AppSettings settings);
+        string GetWatchPath();
+        int GetBatchTimeoutSeconds();
+        List<string> GetMonitoredFileTypes();
+        List<string> GetHiddenPrinters();
+        FileTypeAssociation GetFileTypeAssociation(string fileExtension);
+        TaskHistorySettings GetTaskHistorySettings();
+    }
+
+    /// <summary>
+    /// 文件夹监视接口
+    /// </summary>
+    public interface IFolderMonitor
+    {
+        event EventHandler<FileBatchEventArgs> FilesBatchReady;
+        void StartMonitoring(string path, int batchTimeoutSeconds, IEnumerable<string> fileTypes);
+        void StopMonitoring();
+    }
+
+    public class FileBatchEventArgs : EventArgs
+    {
+        public List<string> FilePaths { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// 打印管理接口
+    /// </summary>
+    public interface IPrintManager
+    {
+        event EventHandler<PrintCompletedEventArgs> PrintCompleted;
+        List<string> GetAvailablePrinters();
+        int CalculateTotalPages(IEnumerable<string> filePaths);
+        void PrintFiles(IEnumerable<string> filePaths, string printerName);
+    }
+
+    public class PrintCompletedEventArgs : EventArgs
+    {
+        public bool Success { get; set; }
+        public List<string> FilePaths { get; set; } = new List<string>();
+        public string PrinterName { get; set; } = string.Empty;
+        public int TotalPages { get; set; }
+    }
+
+    /// <summary>
+    /// 文件操作接口
+    /// </summary>
+    public interface IFileOperator
+    {
+        string MoveFilesToTimestampDirectory(IEnumerable<string> filePaths, string baseDirectory);
+    }
+
+    /// <summary>
+    /// 任务历史记录接口
+    /// </summary>
+    public interface ITaskHistoryManager
+    {
+        void AddTaskRecord(PrintTaskRecord record);
+        List<PrintTaskRecord> GetRecentTasks(int count);
+    }
+
+    public class PrintTaskRecord
+    {
+        public DateTime Timestamp { get; set; } = DateTime.Now;
+        public int FileCount { get; set; }
+        public int TotalPages { get; set; }
+        public string PrinterName { get; set; } = string.Empty;
+        public List<string> FilePaths { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// 日志接口
+    /// </summary>
+    public interface ILogger
+    {
+        void Info(string message);
+        void Warning(string message);
+        void Error(string message, Exception? ex = null);
+    }
+}
