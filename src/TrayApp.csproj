@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="iTextSharp" Version="5.5.13.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TrayApp.Core.cs" />
+    <Compile Include="TrayApp.Configuration.cs" />
+    <Compile Include="TrayApp.FolderMonitor.cs" />
+    <Compile Include="TrayApp.Printing.cs" />
+    <Compile Include="TrayApp.FileOperations.cs" />
+    <Compile Include="TrayApp.TaskHistory.cs" />
+    <Compile Include="TrayApp.UI.cs" />
+    <Compile Include="TrayApp.cs" />
+  </ItemGroup>
+
+</Project>
