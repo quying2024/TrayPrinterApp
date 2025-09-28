@@ -15,4 +15,25 @@
     <PackageReference Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />
   </ItemGroup>
 
+  <!-- Include markdown docs from solution-level docs folder as Solution Explorer items under a virtual 'docs/' -->
+  <ItemGroup>
+    <None Include="..\docs\**\*.md">
+      <Link>docs\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </None>
+    <!-- Map root-level markdowns into the same virtual docs/ folder -->
+    <None Include="..\项目技术架构设计.md">
+      <Link>docs\项目技术架构设计.md</Link>
+    </None>
+    <None Include="..\项目背景说明.md">
+      <Link>docs\项目背景说明.md</Link>
+    </None>
+    <!-- Map newly created README and LICENSE into the virtual docs/ folder -->
+    <None Include="..\README.md">
+      <Link>docs\README.md</Link>
+    </None>
+    <None Include="..\LICENSE">
+      <Link>docs\LICENSE</Link>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -1,25 +1,31 @@
 {
   "format": 1,
   "restore": {
-    "D:\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj": {}
+    "C:\\Users\\quying\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj": {}
   },
   "projects": {
-    "D:\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj": {
+    "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj",
+        "projectUniqueName": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj",
         "projectName": "TrayApp",
-        "projectPath": "D:\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj",
-        "packagesPath": "C:\\Users\\quand\\.nuget\\packages\\",
-        "outputPath": "D:\\Projects\\TrayPrinterApp\\src\\obj\\",
+        "projectPath": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj",
+        "packagesPath": "C:\\Users\\quying\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\quand\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\quying\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0-windows"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -44,6 +50,10 @@
         "net8.0-windows7.0": {
           "targetAlias": "net8.0-windows",
           "dependencies": {
+            "Microsoft.Office.Interop.Word": {
+              "target": "Package",
+              "version": "[15.0.4797.1004, )"
+            },
             "Newtonsoft.Json": {
               "target": "Package",
               "version": "[13.0.3, )"
@@ -64,24 +74,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[8.0.20, 8.0.20]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
@@ -94,30 +86,36 @@
         }
       }
     },
-    "D:\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj": {
+    "C:\\Users\\quying\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj",
+        "projectUniqueName": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj",
         "projectName": "TrayApp.Tests",
-        "projectPath": "D:\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj",
-        "packagesPath": "C:\\Users\\quand\\.nuget\\packages\\",
-        "outputPath": "D:\\Projects\\TrayPrinterApp\\tests\\obj\\",
+        "projectPath": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\tests\\TrayApp.Tests.csproj",
+        "packagesPath": "C:\\Users\\quying\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\tests\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\quand\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\quying\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
-          "net8.0"
+          "net8.0-windows"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net8.0": {
-            "targetAlias": "net8.0",
+          "net8.0-windows7.0": {
+            "targetAlias": "net8.0-windows",
             "projectReferences": {
-              "D:\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj": {
-                "projectPath": "D:\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj"
+              "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj": {
+                "projectPath": "C:\\Users\\quying\\Projects\\TrayPrinterApp\\src\\TrayApp.csproj"
               }
             }
           }
@@ -135,8 +133,8 @@
         "SdkAnalysisLevel": "9.0.300"
       },
       "frameworks": {
-        "net8.0": {
-          "targetAlias": "net8.0",
+        "net8.0-windows7.0": {
+          "targetAlias": "net8.0-windows",
           "dependencies": {
             "FluentAssertions": {
               "target": "Package",
@@ -182,23 +180,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.20, 8.0.20]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
+            },
+            "Microsoft.WindowsDesktop.App.WindowsForms": {
+              "privateAssets": "none"
             }
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
