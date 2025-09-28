@@ -1,0 +1,27 @@
+# Ignore Visual Studio and .NET build output
+
+# VS cache and temp files
+.vs/
+
+# Build output
+**/bin/
+**/obj/
+**/out/
+**/Debug/
+**/Release/
+TestResults/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+*.userosscache
+*.userprefs
+
+# Logs and caches
+*.log
+*.cache
+
+# Rider/VS Code (optional)
+.idea/
+.vscode/
