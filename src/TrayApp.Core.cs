@@ -145,8 +145,30 @@ namespace TrayApp.Core
 
         public FileLogger()
         {
-            _logPath = Path.Combine("logs", $"app_{DateTime.Now:yyyyMMdd}.log");
-            Directory.CreateDirectory(Path.GetDirectoryName(_logPath)!);
+            // Prefer CommonApplicationData so non-admin users can write logs after installation
+            try
+            {
+                var logsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TrayPrinterApp", "logs");
+                Directory.CreateDirectory(logsDir);
+                _logPath = Path.Combine(logsDir, $"app_{DateTime.Now:yyyyMMdd}.log");
+            }
+            catch
+            {
+                // Fallback to per-user LocalApplicationData if CommonApplicationData not available
+                try
+                {
+                    var userLogs = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayPrinterApp", "logs");
+                    Directory.CreateDirectory(userLogs);
+                    _logPath = Path.Combine(userLogs, $"app_{DateTime.Now:yyyyMMdd}.log");
+                }
+                catch
+                {
+                    // Last resort: use application base directory (may be read-only under Program Files)
+                    var fallbackDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+                    Directory.CreateDirectory(fallbackDir);
+                    _logPath = Path.Combine(fallbackDir, $"app_{DateTime.Now:yyyyMMdd}.log");
+                }
+            }
         }
 
         public void Debug(string message)
