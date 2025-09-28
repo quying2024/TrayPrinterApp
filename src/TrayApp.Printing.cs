@@ -374,7 +374,7 @@ namespace TrayApp.Printing
                 wordApp.DisplayAlerts = Microsoft.Office.Interop.Word.WdAlertLevel.wdAlertsNone;
 
                 doc = wordApp.Documents.Open(
-                    fileName: filePath,
+                    FileName: filePath,
                     ReadOnly: true
                 );
 

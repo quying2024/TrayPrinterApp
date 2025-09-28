@@ -7,7 +7,7 @@ namespace TrayApp.Tests.Helpers
     /// <summary>
     /// Mock对象工厂，提供常用的Mock实例
     /// </summary>
-    public static class MockFactory
+    public static class TestMockFactory
     {
         /// <summary>
         /// 创建Mock配置服务

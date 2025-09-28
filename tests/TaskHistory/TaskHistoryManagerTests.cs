@@ -18,7 +18,7 @@ namespace TrayApp.Tests.TaskHistory
         public void AddTaskRecord_NewRecord_ShouldAddSuccessfully()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             var testStoragePath = GetTestDataPath("test_history.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
@@ -27,8 +27,8 @@ namespace TrayApp.Tests.TaskHistory
                          StoragePath = testStoragePath 
                      });
 
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             var taskRecord = new PrintTaskRecord
             {
@@ -55,7 +55,7 @@ namespace TrayApp.Tests.TaskHistory
         public void AddTaskRecord_ExceedsMaxRecords_ShouldTrimOldRecords()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             var testStoragePath = GetTestDataPath("test_history_trim.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
@@ -64,8 +64,8 @@ namespace TrayApp.Tests.TaskHistory
                          StoragePath = testStoragePath 
                      });
 
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             // Act - 添加4条记录，超过最大限制3条
             for (int i = 1; i <= 4; i++)
@@ -98,7 +98,7 @@ namespace TrayApp.Tests.TaskHistory
         public void GetRecentTasks_RequestMoreThanAvailable_ShouldReturnAllAvailable()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             var testStoragePath = GetTestDataPath("test_history_count.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
@@ -107,8 +107,8 @@ namespace TrayApp.Tests.TaskHistory
                          StoragePath = testStoragePath 
                      });
 
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             // 添加2条记录
             for (int i = 1; i <= 2; i++)
@@ -131,7 +131,7 @@ namespace TrayApp.Tests.TaskHistory
         public void GetRecentTasks_EmptyHistory_ShouldReturnEmptyList()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             var testStoragePath = GetTestDataPath("empty_history.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
@@ -140,8 +140,8 @@ namespace TrayApp.Tests.TaskHistory
                          StoragePath = testStoragePath 
                      });
 
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             // Act
             var tasks = historyManager.GetRecentTasks(5);
@@ -156,7 +156,7 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var testStoragePath = GetTestDataPath("persistence_test_history.json");
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
                      { 
@@ -164,7 +164,7 @@ namespace TrayApp.Tests.TaskHistory
                          StoragePath = testStoragePath 
                      });
 
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
 
             var originalRecord = new PrintTaskRecord
             {
@@ -199,27 +199,28 @@ namespace TrayApp.Tests.TaskHistory
         }
 
         [Fact]
-        public void AddTaskRecord_NullRecord_ShouldHandleGracefully()
+        public void AddTaskRecord_NullRecord_ShouldThrowArgumentNullException()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             // Act & Assert
             Action act = () => historyManager.AddTaskRecord(null!);
             
-            // 具体行为取决于实现，应该要么抛出ArgumentNullException，要么优雅处理
-            act.Should().Throw<ArgumentNullException>().Or.NotThrow();
+            // 修复：应该抛出ArgumentNullException
+            var exception = Assert.Throws<ArgumentNullException>(act);
+            exception.Should().BeOfType<ArgumentNullException>();
         }
 
         [Fact]
         public void GetRecentTasks_NegativeCount_ShouldReturnEmptyList()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
-            var logger = MockFactory.CreateMockLogger();
-            var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var logger = TestMockFactory.CreateMockLogger();
+            using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
             // Act
             var tasks = historyManager.GetRecentTasks(-1);

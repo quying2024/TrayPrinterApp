@@ -24,7 +24,6 @@ namespace TrayApp
         private readonly ITaskHistoryManager _taskHistoryManager;
         private readonly TrayIconManager _trayIconManager;
         private readonly ILogger _logger;
-        private bool _isRunning;
         private string _watchPath = string.Empty;
 
         /// <summary>
@@ -50,7 +49,6 @@ namespace TrayApp
                 // 订阅事件
                 SubscribeEvents();
 
-                _isRunning = true;
                 _logger.Info("应用核心服务初始化完成");
             }
             catch (Exception ex)
@@ -118,8 +116,6 @@ namespace TrayApp
         /// </summary>
         public void Stop()
         {
-            _isRunning = false;
-            
             // 停止文件夹监视
             _folderMonitor.StopMonitoring();
             
@@ -229,6 +225,7 @@ namespace TrayApp
         public void Dispose()
         {
             _folderMonitor?.Dispose();
+            _taskHistoryManager?.Dispose();
             _trayIconManager?.Dispose();
         }
     }

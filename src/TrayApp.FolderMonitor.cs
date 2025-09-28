@@ -218,12 +218,31 @@ namespace TrayApp.FolderMonitor
             }
         }
 
+        private bool _disposed = false;
+
         /// <summary>
         /// 释放资源
         /// </summary>
         public void Dispose()
         {
-            StopMonitoring();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // 释放托管资源
+                StopMonitoring();
+            }
+
+            _disposed = true;
         }
     }
 }

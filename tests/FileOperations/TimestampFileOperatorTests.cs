@@ -17,7 +17,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_EmptyFileList_ShouldCreateDirectoryAndReturnPath()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             var baseDir = Path.Combine(TestDirectory, "BaseDirectory");
             Directory.CreateDirectory(baseDir);
@@ -39,7 +39,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_SingleFile_ShouldMoveFileCorrectly()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             
             var sourceDir = Path.Combine(TestDirectory, "SourceDir");
@@ -67,7 +67,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_MultipleFiles_ShouldMoveAllFiles()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             
             var sourceDir = Path.Combine(TestDirectory, "SourceDir");
@@ -107,7 +107,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_DuplicateFileName_ShouldRenameFile()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             
             var sourceDir = Path.Combine(TestDirectory, "SourceDir");
@@ -142,7 +142,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_NonExistentSourceFile_ShouldHandleGracefully()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             
             var baseDir = Path.Combine(TestDirectory, "BaseDir");
@@ -162,7 +162,7 @@ namespace TrayApp.Tests.FileOperations
         public void MoveFilesToTimestampDirectory_InvalidBasePath_ShouldThrowException()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var fileOperator = new TimestampFileOperator(logger.Object);
             
             var sourceFile = CreateTestFile("test.pdf", "content");
@@ -170,7 +170,11 @@ namespace TrayApp.Tests.FileOperations
 
             // Act & Assert
             Action act = () => fileOperator.MoveFilesToTimestampDirectory(new[] { sourceFile }, invalidBasePath);
-            act.Should().Throw<DirectoryNotFoundException>().Or.Throw<UnauthorizedAccessException>();
+            
+            // 修复：使用Assert.ThrowsAny来捕获任何异常类型
+            var exception = Assert.ThrowsAny<Exception>(act);
+            exception.Should().Match(ex => ex is DirectoryNotFoundException || ex is UnauthorizedAccessException,
+                "应该抛出DirectoryNotFoundException或UnauthorizedAccessException");
         }
     }
 }

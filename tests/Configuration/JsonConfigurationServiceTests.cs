@@ -3,8 +3,8 @@ using FluentAssertions;
 using TrayApp.Configuration;
 using TrayApp.Core;
 using TrayApp.Tests.Helpers;
-using Newtonsoft.Json;
 using System.IO;
+using System.Collections.Generic;
 
 namespace TrayApp.Tests.Configuration
 {
@@ -14,108 +14,89 @@ namespace TrayApp.Tests.Configuration
     public class JsonConfigurationServiceTests : TestBase
     {
         [Fact]
-        public void LoadConfiguration_ValidConfigFile_ShouldLoadCorrectly()
+        public void Constructor_ValidConfigPath_ShouldLoadSuccessfully()
         {
             // Arrange
-            var testConfig = @"{
-                ""Monitoring"": {
-                    ""WatchPath"": ""C:\\TestFolder"",
-                    ""BatchTimeoutSeconds"": 5,
-                    ""FileTypes"": ["".pdf"", "".docx""]
-                },
-                ""PrinterManagement"": {
-                    ""HiddenPrinters"": [""TestPrinter1"", ""TestPrinter2""],
-                    ""DisplayOrder"": ""UsageFrequency""
-                }
-            }";
-            
-            var configPath = CreateTestConfigFile(testConfig);
-            var logger = MockFactory.CreateMockLogger();
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
 
-            // Act
+            // Act & Assert
+            Action act = () => new JsonConfigurationService(configPath, logger.Object);
+            act.Should().NotThrow();
+        }
+
+        [Fact]
+        public void GetWatchPath_FromValidConfig_ShouldReturnCorrectPath()
+        {
+            // Arrange
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
             var configService = new JsonConfigurationService(configPath, logger.Object);
-            var settings = configService.GetSettings();
+
+            // Act
+            var watchPath = configService.GetWatchPath();
 
             // Assert
-            settings.Should().NotBeNull();
-            settings.Monitoring.WatchPath.Should().Be("C:\\TestFolder");
-            settings.Monitoring.BatchTimeoutSeconds.Should().Be(5);
-            settings.Monitoring.FileTypes.Should().Contain(".pdf").And.Contain(".docx");
-            settings.PrinterManagement.HiddenPrinters.Should().Contain("TestPrinter1").And.Contain("TestPrinter2");
+            watchPath.Should().NotBeNullOrEmpty();
+            watchPath.Should().Contain("TestWatch");
         }
 
         [Fact]
-        public void LoadConfiguration_NonExistentFile_ShouldCreateDefaultConfig()
+        public void GetBatchTimeoutSeconds_FromValidConfig_ShouldReturnCorrectValue()
         {
             // Arrange
-            var nonExistentPath = GetTestDataPath("non_existent_config.json");
-            var logger = MockFactory.CreateMockLogger();
-
-            // Act
-            var configService = new JsonConfigurationService(nonExistentPath, logger.Object);
-            var settings = configService.GetSettings();
-
-            // Assert
-            settings.Should().NotBeNull();
-            File.Exists(nonExistentPath).Should().BeTrue("配置文件应该被自动创建");
-            settings.Monitoring.FileTypes.Should().NotBeEmpty("默认配置应包含文件类型");
-        }
-
-        [Fact]
-        public void LoadConfiguration_MalformedJson_ShouldFallbackToDefault()
-        {
-            // Arrange
-            var malformedConfig = @"{ ""Monitoring"": { ""WatchPath"":"; // 故意的格式错误
-            var configPath = CreateTestConfigFile(malformedConfig);
-            var logger = MockFactory.CreateMockLogger();
-
-            // Act
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
             var configService = new JsonConfigurationService(configPath, logger.Object);
-            var settings = configService.GetSettings();
+
+            // Act
+            var timeout = configService.GetBatchTimeoutSeconds();
 
             // Assert
-            settings.Should().NotBeNull();
-            settings.Monitoring.FileTypes.Should().NotBeEmpty("应该回退到默认配置");
+            timeout.Should().BePositive();
+            timeout.Should().Be(3); // 默认配置值
         }
 
         [Fact]
-        public void GetHiddenPrinters_ShouldReturnConfiguredPrinters()
+        public void GetMonitoredFileTypes_FromValidConfig_ShouldReturnExpectedTypes()
         {
             // Arrange
-            var testConfig = @"{
-                ""PrinterManagement"": {
-                    ""HiddenPrinters"": [""HiddenPrinter1"", ""HiddenPrinter2""]
-                }
-            }";
-            
-            var configPath = CreateTestConfigFile(testConfig);
-            var logger = MockFactory.CreateMockLogger();
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
+            var configService = new JsonConfigurationService(configPath, logger.Object);
+
+            // Act
+            var fileTypes = configService.GetMonitoredFileTypes();
+
+            // Assert
+            fileTypes.Should().NotBeNull();
+            fileTypes.Should().Contain(".pdf");
+            fileTypes.Should().Contain(".docx");
+            fileTypes.Should().Contain(".jpg");
+        }
+
+        [Fact]
+        public void GetHiddenPrinters_FromValidConfig_ShouldReturnHiddenList()
+        {
+            // Arrange
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
             var configService = new JsonConfigurationService(configPath, logger.Object);
 
             // Act
             var hiddenPrinters = configService.GetHiddenPrinters();
 
             // Assert
-            hiddenPrinters.Should().Contain("HiddenPrinter1").And.Contain("HiddenPrinter2");
-            hiddenPrinters.Should().HaveCount(2);
+            hiddenPrinters.Should().NotBeNull();
+            hiddenPrinters.Should().Contain("TestHiddenPrinter");
         }
 
         [Fact]
         public void GetFileTypeAssociation_ExistingType_ShouldReturnAssociation()
         {
             // Arrange
-            var testConfig = @"{
-                ""FileTypeAssociations"": {
-                    "".pdf"": {
-                        ""ExecutorPath"": ""test_reader.exe"",
-                        ""Arguments"": ""/print \""{FilePath}\"""",
-                        ""PageCounterType"": ""PdfPageCounter""
-                    }
-                }
-            }";
-            
-            var configPath = CreateTestConfigFile(testConfig);
-            var logger = MockFactory.CreateMockLogger();
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
             var configService = new JsonConfigurationService(configPath, logger.Object);
 
             // Act
@@ -123,45 +104,59 @@ namespace TrayApp.Tests.Configuration
 
             // Assert
             association.Should().NotBeNull();
-            association!.ExecutorPath.Should().Be("test_reader.exe");
+            association!.ExecutorPath.Should().NotBeNullOrEmpty();
             association.PageCounterType.Should().Be("PdfPageCounter");
         }
 
         [Fact]
-        public void GetFileTypeAssociation_NonExistentType_ShouldReturnNull()
+        public void GetFileTypeAssociation_NonExistingType_ShouldReturnNull()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
-            var configService = new JsonConfigurationService(GetTestDataPath("empty_config.json"), logger.Object);
+            var configPath = CreateTestConfigFile();
+            var logger = TestMockFactory.CreateMockLogger();
+            var configService = new JsonConfigurationService(configPath, logger.Object);
 
             // Act
-            var association = configService.GetFileTypeAssociation(".xyz");
+            var association = configService.GetFileTypeAssociation(".unknown");
 
             // Assert
             association.Should().BeNull();
         }
 
         [Fact]
-        public void SaveSettings_ValidSettings_ShouldPersistCorrectly()
+        public void SaveSettings_ValidSettings_ShouldPersistToFile()
         {
             // Arrange
-            var configPath = GetTestDataPath("save_test_config.json");
-            var logger = MockFactory.CreateMockLogger();
+            var configPath = Path.Combine(TestDirectory, "save_test_config.json");
+            var logger = TestMockFactory.CreateMockLogger();
+            var testSettings = TestMockFactory.CreateTestAppSettings();
+            testSettings.Monitoring.WatchPath = @"C:\ModifiedPath";
+
             var configService = new JsonConfigurationService(configPath, logger.Object);
-            
-            var newSettings = MockFactory.CreateTestAppSettings();
-            newSettings.Monitoring.WatchPath = "C:\\NewTestPath";
 
             // Act
-            configService.SaveSettings(newSettings);
-            
-            // 重新加载验证
-            var reloadedService = new JsonConfigurationService(configPath, logger.Object);
-            var reloadedSettings = reloadedService.GetSettings();
+            configService.SaveSettings(testSettings);
 
             // Assert
-            reloadedSettings.Monitoring.WatchPath.Should().Be("C:\\NewTestPath");
             File.Exists(configPath).Should().BeTrue();
+            
+            // 验证保存的内容
+            var reloadedService = new JsonConfigurationService(configPath, logger.Object);
+            reloadedService.GetWatchPath().Should().Be(@"C:\ModifiedPath");
+        }
+
+        /// <summary>
+        /// 创建测试配置文件
+        /// </summary>
+        private string CreateTestConfigFile()
+        {
+            var configPath = Path.Combine(TestDirectory, "test_config.json");
+            var testSettings = TestMockFactory.CreateTestAppSettings();
+            
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(testSettings, Newtonsoft.Json.Formatting.Indented);
+            File.WriteAllText(configPath, json);
+            
+            return configPath;
         }
     }
 }

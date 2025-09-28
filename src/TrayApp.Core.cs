@@ -66,7 +66,7 @@ namespace TrayApp.Core
     /// <summary>
     /// 文件夹监视接口
     /// </summary>
-    public interface IFolderMonitor
+    public interface IFolderMonitor : IDisposable
     {
         event EventHandler<FileBatchEventArgs> FilesBatchReady;
         void StartMonitoring(string path, int batchTimeoutSeconds, IEnumerable<string> fileTypes);
@@ -95,6 +95,7 @@ namespace TrayApp.Core
         public List<string> FilePaths { get; set; } = new List<string>();
         public string PrinterName { get; set; } = string.Empty;
         public int TotalPages { get; set; }
+        public int FileCount => FilePaths.Count; // 添加缺失的FileCount属性，自动计算文件数量
     }
 
     /// <summary>
@@ -108,7 +109,7 @@ namespace TrayApp.Core
     /// <summary>
     /// 任务历史记录接口
     /// </summary>
-    public interface ITaskHistoryManager
+    public interface ITaskHistoryManager : IDisposable
     {
         void AddTaskRecord(PrintTaskRecord record);
         List<PrintTaskRecord> GetRecentTasks(int count);

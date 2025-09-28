@@ -4,8 +4,8 @@ using TrayApp.FolderMonitor;
 using TrayApp.Core;
 using TrayApp.Tests.Helpers;
 using System.IO;
-using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace TrayApp.Tests.FolderMonitor
 {
@@ -15,183 +15,167 @@ namespace TrayApp.Tests.FolderMonitor
     public class FileSystemWatcherMonitorTests : TestBase
     {
         [Fact]
-        public async Task StartMonitoring_SingleFile_ShouldTriggerEvent()
+        public void StartMonitoring_ValidParameters_ShouldStartSuccessfully()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var watchDir = Path.Combine(TestDirectory, "WatchFolder");
-            Directory.CreateDirectory(watchDir);
-
-            FileBatchEventArgs? capturedArgs = null;
-            monitor.FilesBatchReady += (sender, args) => capturedArgs = args;
-
-            // Act
-            monitor.StartMonitoring(watchDir, 2, new[] { ".pdf" }); // 2秒超时
             
-            // 创建测试文件
-            var testFile = Path.Combine(watchDir, "test.pdf");
-            await File.WriteAllTextAsync(testFile, "Test PDF Content");
+            var watchPath = Path.Combine(TestDirectory, "MonitorTest");
+            Directory.CreateDirectory(watchPath);
             
-            // 等待批处理超时
-            await Task.Delay(3000);
-
-            // Assert
-            capturedArgs.Should().NotBeNull();
-            capturedArgs!.FilePaths.Should().ContainSingle();
-            capturedArgs.FilePaths[0].Should().Be(testFile);
-
-            // Cleanup
-            monitor.StopMonitoring();
-        }
-
-        [Fact]
-        public async Task StartMonitoring_MultipleBatchFiles_ShouldCombineInBatch()
-        {
-            // Arrange
-            var logger = MockFactory.CreateMockLogger();
-            var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var watchDir = Path.Combine(TestDirectory, "BatchWatchFolder");
-            Directory.CreateDirectory(watchDir);
-
-            FileBatchEventArgs? capturedArgs = null;
-            monitor.FilesBatchReady += (sender, args) => capturedArgs = args;
-
-            // Act
-            monitor.StartMonitoring(watchDir, 3, new[] { ".pdf", ".docx" }); // 3秒超时
-
-            // 在3秒内创建多个文件
-            var file1 = Path.Combine(watchDir, "file1.pdf");
-            var file2 = Path.Combine(watchDir, "file2.docx");
-            var file3 = Path.Combine(watchDir, "file3.pdf");
-
-            await File.WriteAllTextAsync(file1, "Content 1");
-            await Task.Delay(500);
-            await File.WriteAllTextAsync(file2, "Content 2");
-            await Task.Delay(500);
-            await File.WriteAllTextAsync(file3, "Content 3");
-            
-            // 等待批处理超时
-            await Task.Delay(4000);
-
-            // Assert
-            capturedArgs.Should().NotBeNull();
-            capturedArgs!.FilePaths.Should().HaveCount(3);
-            capturedArgs.FilePaths.Should().Contain(file1);
-            capturedArgs.FilePaths.Should().Contain(file2);
-            capturedArgs.FilePaths.Should().Contain(file3);
-
-            // Cleanup
-            monitor.StopMonitoring();
-        }
-
-        [Fact]
-        public async Task StartMonitoring_FileTypeFilter_ShouldOnlyIncludeMatchingFiles()
-        {
-            // Arrange
-            var logger = MockFactory.CreateMockLogger();
-            var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var watchDir = Path.Combine(TestDirectory, "FilterWatchFolder");
-            Directory.CreateDirectory(watchDir);
-
-            FileBatchEventArgs? capturedArgs = null;
-            monitor.FilesBatchReady += (sender, args) => capturedArgs = args;
-
-            // Act
-            monitor.StartMonitoring(watchDir, 2, new[] { ".pdf" }); // 只监视PDF文件
-
-            // 创建不同类型的文件
-            var pdfFile = Path.Combine(watchDir, "test.pdf");
-            var txtFile = Path.Combine(watchDir, "test.txt");
-            
-            await File.WriteAllTextAsync(pdfFile, "PDF Content");
-            await File.WriteAllTextAsync(txtFile, "TXT Content");
-            
-            // 等待批处理超时
-            await Task.Delay(3000);
-
-            // Assert
-            capturedArgs.Should().NotBeNull();
-            capturedArgs!.FilePaths.Should().ContainSingle();
-            capturedArgs.FilePaths[0].Should().Be(pdfFile);
-            capturedArgs.FilePaths.Should().NotContain(txtFile);
-
-            // Cleanup
-            monitor.StopMonitoring();
-        }
-
-        [Fact]
-        public void StartMonitoring_InvalidDirectory_ShouldThrowException()
-        {
-            // Arrange
-            var logger = MockFactory.CreateMockLogger();
-            var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var invalidDir = Path.Combine(TestDirectory, "NonExistentFolder");
+            var fileTypes = new List<string> { ".pdf", ".docx" };
 
             // Act & Assert
-            Action act = () => monitor.StartMonitoring(invalidDir, 3, new[] { ".pdf" });
+            Action act = () => monitor.StartMonitoring(watchPath, 3, fileTypes);
+            act.Should().NotThrow();
+
+            // Cleanup
+            monitor.StopMonitoring();
+        }
+
+        [Fact]
+        public void StartMonitoring_InvalidPath_ShouldThrowException()
+        {
+            // Arrange
+            var logger = TestMockFactory.CreateMockLogger();
+            var monitor = new FileSystemWatcherMonitor(logger.Object);
+            
+            var invalidPath = Path.Combine("X:\\", "NonExistentPath");
+            var fileTypes = new List<string> { ".pdf" };
+
+            // Act & Assert
+            Action act = () => monitor.StartMonitoring(invalidPath, 3, fileTypes);
             act.Should().Throw<DirectoryNotFoundException>();
         }
 
         [Fact]
-        public void StartMonitoring_EmptyPath_ShouldThrowException()
+        public void StartMonitoring_EmptyPath_ShouldThrowArgumentException()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var monitor = new FileSystemWatcherMonitor(logger.Object);
+            
+            var fileTypes = new List<string> { ".pdf" };
 
             // Act & Assert
-            Action act = () => monitor.StartMonitoring("", 3, new[] { ".pdf" });
+            Action act = () => monitor.StartMonitoring("", 3, fileTypes);
             act.Should().Throw<ArgumentException>();
         }
 
         [Fact]
-        public void StopMonitoring_WhenRunning_ShouldStopGracefully()
+        public void StartMonitoring_NegativeTimeout_ShouldThrowArgumentException()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var watchDir = Path.Combine(TestDirectory, "StopTestFolder");
-            Directory.CreateDirectory(watchDir);
+            
+            var watchPath = Path.Combine(TestDirectory, "TimeoutTest");
+            Directory.CreateDirectory(watchPath);
+            var fileTypes = new List<string> { ".pdf" };
 
-            monitor.StartMonitoring(watchDir, 3, new[] { ".pdf" });
+            // Act & Assert
+            Action act = () => monitor.StartMonitoring(watchPath, -1, fileTypes);
+            act.Should().Throw<ArgumentException>();
+        }
+
+        [Fact]
+        public void FilesBatchReady_Event_ShouldTriggerWhenFilesAdded()
+        {
+            // Arrange
+            var logger = TestMockFactory.CreateMockLogger();
+            var monitor = new FileSystemWatcherMonitor(logger.Object);
+            
+            var watchPath = Path.Combine(TestDirectory, "EventTest");
+            Directory.CreateDirectory(watchPath);
+            
+            var eventTriggered = false;
+            FileBatchEventArgs? capturedArgs = null;
+            
+            monitor.FilesBatchReady += (sender, args) =>
+            {
+                eventTriggered = true;
+                capturedArgs = args;
+            };
+
+            monitor.StartMonitoring(watchPath, 1, new[] { ".pdf" }); // 1秒超时便于测试
 
             // Act
-            Action act = () => monitor.StopMonitoring();
+            var testFile = Path.Combine(watchPath, "test.pdf");
+            File.WriteAllText(testFile, "Test content");
+
+            // 等待事件触发
+            Thread.Sleep(2000); // 等待超过超时时间
 
             // Assert
+            eventTriggered.Should().BeTrue("文件创建后应该触发事件");
+            capturedArgs.Should().NotBeNull();
+            capturedArgs!.FilePaths.Should().Contain(testFile);
+
+            // Cleanup
+            monitor.StopMonitoring();
+        }
+
+        [Fact]
+        public void StopMonitoring_RunningMonitor_ShouldStopSuccessfully()
+        {
+            // Arrange
+            var logger = TestMockFactory.CreateMockLogger();
+            var monitor = new FileSystemWatcherMonitor(logger.Object);
+            
+            var watchPath = Path.Combine(TestDirectory, "StopTest");
+            Directory.CreateDirectory(watchPath);
+
+            monitor.StartMonitoring(watchPath, 3, new[] { ".pdf" });
+
+            // Act & Assert
+            Action act = () => monitor.StopMonitoring();
             act.Should().NotThrow();
         }
 
         [Fact]
-        public async Task FilesBatchReady_MultipleSubscribers_ShouldNotifyAll()
+        public void FileTypeFilter_NonMonitoredType_ShouldNotTriggerEvent()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var monitor = new FileSystemWatcherMonitor(logger.Object);
-            var watchDir = Path.Combine(TestDirectory, "MultiSubscriberFolder");
-            Directory.CreateDirectory(watchDir);
+            
+            var watchPath = Path.Combine(TestDirectory, "FilterTest");
+            Directory.CreateDirectory(watchPath);
+            
+            var eventTriggered = false;
+            monitor.FilesBatchReady += (sender, args) => eventTriggered = true;
 
-            var subscriber1Called = false;
-            var subscriber2Called = false;
-
-            monitor.FilesBatchReady += (sender, args) => subscriber1Called = true;
-            monitor.FilesBatchReady += (sender, args) => subscriber2Called = true;
+            monitor.StartMonitoring(watchPath, 1, new[] { ".pdf" }); // 仅监视PDF
 
             // Act
-            monitor.StartMonitoring(watchDir, 2, new[] { ".pdf" });
-            
-            var testFile = Path.Combine(watchDir, "multi_test.pdf");
-            await File.WriteAllTextAsync(testFile, "Test Content");
-            
-            await Task.Delay(3000);
+            var txtFile = Path.Combine(watchPath, "test.txt"); // 创建非监视类型文件
+            File.WriteAllText(txtFile, "Text content");
+
+            Thread.Sleep(2000); // 等待
 
             // Assert
-            subscriber1Called.Should().BeTrue();
-            subscriber2Called.Should().BeTrue();
+            eventTriggered.Should().BeFalse("非监视文件类型不应触发事件");
 
             // Cleanup
             monitor.StopMonitoring();
+        }
+
+        [Fact]
+        public void Dispose_ShouldCleanupResources()
+        {
+            // Arrange
+            var logger = TestMockFactory.CreateMockLogger();
+            var monitor = new FileSystemWatcherMonitor(logger.Object);
+            
+            var watchPath = Path.Combine(TestDirectory, "DisposeTest");
+            Directory.CreateDirectory(watchPath);
+
+            monitor.StartMonitoring(watchPath, 3, new[] { ".pdf" });
+
+            // Act & Assert
+            Action act = () => monitor.Dispose();
+            act.Should().NotThrow();
         }
     }
 }

@@ -19,11 +19,11 @@ namespace TrayApp.Tests.Printing
         public void GetAvailablePrinters_WithHiddenPrinters_ShouldFilterCorrectly()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetHiddenPrinters())
                      .Returns(new List<string> { "HiddenPrinter1", "Microsoft Print to PDF" });
             
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             // Act
@@ -42,8 +42,8 @@ namespace TrayApp.Tests.Printing
         public void CalculateTotalPages_EmptyFileList_ShouldReturnZero()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
-            var logger = MockFactory.CreateMockLogger();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             // Act
@@ -57,7 +57,7 @@ namespace TrayApp.Tests.Printing
         public void CalculateTotalPages_WithMockPdfFile_ShouldReturnExpectedCount()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetFileTypeAssociation(".pdf"))
                      .Returns(new FileTypeAssociation
                      {
@@ -66,7 +66,7 @@ namespace TrayApp.Tests.Printing
                          PageCounterType = "PdfPageCounter"
                      });
 
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             // 创建一个模拟的PDF文件（仅用于路径测试，不依赖真实的PDF内容）
@@ -83,11 +83,11 @@ namespace TrayApp.Tests.Printing
         public void CalculateTotalPages_UnsupportedFileType_ShouldHandleGracefully()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetFileTypeAssociation(".xyz"))
                      .Returns((FileTypeAssociation?)null);
 
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             var unsupportedFile = CreateTestFile("test.xyz", "Unsupported content");
@@ -103,8 +103,8 @@ namespace TrayApp.Tests.Printing
         public void PrintFiles_EmptyFileList_ShouldNotThrow()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
-            var logger = MockFactory.CreateMockLogger();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             // Act & Assert
@@ -116,7 +116,7 @@ namespace TrayApp.Tests.Printing
         public void PrintFiles_ValidFiles_ShouldTriggerPrintCompletedEvent()
         {
             // Arrange
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetFileTypeAssociation(".pdf"))
                      .Returns(new FileTypeAssociation
                      {
@@ -125,7 +125,7 @@ namespace TrayApp.Tests.Printing
                          PageCounterType = "PdfPageCounter"
                      });
 
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var printManager = new ExternalPrintManager(mockConfig.Object, logger.Object);
 
             PrintCompletedEventArgs? capturedArgs = null;
@@ -148,12 +148,12 @@ namespace TrayApp.Tests.Printing
         public void Constructor_NullParameters_ShouldThrowArgumentNullException()
         {
             // Arrange & Act & Assert
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             
             Action actNullConfig = () => new ExternalPrintManager(null!, logger.Object);
             actNullConfig.Should().Throw<ArgumentNullException>();
 
-            var mockConfig = MockFactory.CreateMockConfigurationService();
+            var mockConfig = TestMockFactory.CreateMockConfigurationService();
             Action actNullLogger = () => new ExternalPrintManager(mockConfig.Object, null!);
             actNullLogger.Should().Throw<ArgumentNullException>();
         }
@@ -168,7 +168,7 @@ namespace TrayApp.Tests.Printing
         public void ImagePageCounter_CountPages_ShouldAlwaysReturnOne()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var imageCounter = new ImagePageCounter(logger.Object);
             var testImagePath = CreateTestFile("test.jpg", "Mock image content");
 
@@ -183,7 +183,7 @@ namespace TrayApp.Tests.Printing
         public void PdfPageCounter_NonExistentFile_ShouldReturnDefaultValue()
         {
             // Arrange
-            var logger = MockFactory.CreateMockLogger();
+            var logger = TestMockFactory.CreateMockLogger();
             var pdfCounter = new PdfPageCounter(logger.Object);
             var nonExistentPath = GetTestDataPath("non_existent.pdf");
 

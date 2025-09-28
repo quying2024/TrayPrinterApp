@@ -7,23 +7,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="iTextSharp" Version="5.5.13.3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="TrayApp.Core.cs" />
-    <Compile Include="TrayApp.Configuration.cs" />
-    <Compile Include="TrayApp.FolderMonitor.cs" />
-    <Compile Include="TrayApp.Printing.cs" />
-    <Compile Include="TrayApp.FileOperations.cs" />
-    <Compile Include="TrayApp.TaskHistory.cs" />
-    <Compile Include="TrayApp.UI.cs" />
-    <Compile Include="TrayApp.cs" />
+    <PackageReference Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />
   </ItemGroup>
 
 </Project>

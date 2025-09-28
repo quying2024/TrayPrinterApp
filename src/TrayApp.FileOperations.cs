@@ -32,14 +32,9 @@ namespace TrayApp.FileOperations
         public string MoveFilesToTimestampDirectory(IEnumerable<string> filePaths, string baseDirectory)
         {
             if (filePaths == null) throw new ArgumentNullException(nameof(filePaths));
-            if (string.IsNullOrEmpty(baseDirectory)) throw new ArgumentException("基础目录不能为空", nameof(baseDirectory));
+            if (string.IsNullOrWhiteSpace(baseDirectory)) throw new ArgumentException("基础目录不能为空", nameof(baseDirectory));
 
             var files = filePaths.ToList();
-            if (files.Count == 0)
-            {
-                _logger.Info("没有文件需要移动");
-                return string.Empty;
-            }
 
             try
             {
@@ -52,6 +47,12 @@ namespace TrayApp.FileOperations
                 {
                     Directory.CreateDirectory(targetDirectory);
                     _logger.Info($"已创建时间戳目录: {targetDirectory}");
+                }
+
+                if (files.Count == 0)
+                {
+                    _logger.Info("没有文件需要移动，但已创建时间戳目录");
+                    return targetDirectory;
                 }
 
                 // 移动所有文件

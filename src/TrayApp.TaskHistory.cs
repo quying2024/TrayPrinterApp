@@ -11,7 +11,7 @@ namespace TrayApp.TaskHistory
     /// 任务历史管理器，实现ITaskHistoryManager接口
     /// 负责记录和查询打印任务历史
     /// </summary>
-    public class TaskHistoryManager : ITaskHistoryManager
+    public class TaskHistoryManager : ITaskHistoryManager, IDisposable
     {
         private readonly IConfigurationService _configurationService;
         private readonly ILogger _logger;
@@ -19,6 +19,7 @@ namespace TrayApp.TaskHistory
         private readonly object _lockObj = new object();
         private string _storagePath = "task_history.json";
         private int _maxRecords = 5;
+        private bool _disposed = false;
 
         /// <summary>
         /// 初始化TaskHistoryManager实例
@@ -100,17 +101,8 @@ namespace TrayApp.TaskHistory
             {
                 try
                 {
-                    // 只保存需要的字段，排除文件路径详细列表
-                    var recordsToSave = _taskHistory.Select(r => new PrintTaskRecord
-                    {
-                        Timestamp = r.Timestamp,
-                        FileCount = r.FileCount,
-                        TotalPages = r.TotalPages,
-                        PrinterName = r.PrinterName,
-                        FilePaths = new List<string>() // 不保存详细文件路径，节省空间
-                    }).ToList();
-                    
-                    string json = JsonConvert.SerializeObject(recordsToSave, Formatting.Indented);
+                    // 保存完整的记录信息
+                    string json = JsonConvert.SerializeObject(_taskHistory, Formatting.Indented);
                     File.WriteAllText(_storagePath, json);
                     _logger.Debug($"已保存 {_taskHistory.Count} 条任务历史记录");
                 }
@@ -171,9 +163,50 @@ namespace TrayApp.TaskHistory
         {
             lock (_lockObj)
             {
-                count = Math.Max(1, Math.Min(count, _taskHistory.Count));
+                if (count <= 0)
+                {
+                    return new List<PrintTaskRecord>();
+                }
+                
+                count = Math.Min(count, _taskHistory.Count);
                 return _taskHistory.Take(count).ToList();
             }
+        }
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// 释放资源
+        /// </summary>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
+            {
+                // 释放托管资源
+                lock (_lockObj)
+                {
+                    // 保存最后的历史记录
+                    try
+                    {
+                        SaveHistory();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger?.Error("释放资源时保存历史记录失败", ex);
+                    }
+                }
+            }
+
+            _disposed = true;
         }
     }
 }
