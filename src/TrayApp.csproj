@@ -11,8 +11,19 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="iTextSharp" Version="5.5.13.3" />
+    <PackageReference Include="itext7" Version="8.0.5" />
     <PackageReference Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
+    <PackageReference Include="PDFsharp" Version="6.2.2" />
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+  </ItemGroup>
+
+  <!-- Include config files -->
+  <ItemGroup>
+    <None Include="..\config\**\*.*">
+      <Link>config\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- Include markdown docs from solution-level docs folder as Solution Explorer items under a virtual 'docs/' -->

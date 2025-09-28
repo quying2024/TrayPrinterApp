@@ -41,15 +41,15 @@ namespace TrayApp
                 // 创建核心服务
                 _configurationService = new JsonConfigurationService("config/appsettings.json", _logger);
                 _folderMonitor = new FileSystemWatcherMonitor(_logger);
-                _printManager = new ExternalPrintManager(_configurationService, _logger);
+                _printManager = new UnifiedPrintManager(_configurationService, _logger);  // 使用新的统一打印管理器
                 _fileOperator = new TimestampFileOperator(_logger);
                 _taskHistoryManager = new TaskHistoryManager(_configurationService, _logger);
-                _trayIconManager = new TrayIconManager(_logger, _taskHistoryManager);
+                _trayIconManager = new TrayIconManager(_logger, _taskHistoryManager, _configurationService);
 
                 // 订阅事件
                 SubscribeEvents();
 
-                _logger.Info("应用核心服务初始化完成");
+                _logger.Info("应用核心服务初始化完成（使用统一PDF打印架构）");
             }
             catch (Exception ex)
             {
@@ -71,6 +71,7 @@ namespace TrayApp
             
             // 托盘图标事件
             _trayIconManager.ExitRequested += OnExitRequested;
+            _trayIconManager.ConfigurationUpdated += OnConfigurationUpdated;
         }
 
         /// <summary>
@@ -80,25 +81,7 @@ namespace TrayApp
         {
             try
             {
-                // 获取配置的监视路径
-                _watchPath = _configurationService.GetWatchPath();
-                
-                // 确保监视目录存在
-                if (!System.IO.Directory.Exists(_watchPath))
-                {
-                    _logger.Warning($"监视目录不存在，创建目录: {_watchPath}");
-                    System.IO.Directory.CreateDirectory(_watchPath);
-                }
-
-                // 启动文件夹监视
-                var fileTypes = _configurationService.GetMonitoredFileTypes();
-                var batchTimeout = _configurationService.GetBatchTimeoutSeconds();
-                
-                _folderMonitor.StartMonitoring(_watchPath, batchTimeout, fileTypes);
-                _logger.Info($"应用已启动，正在监视目录: {_watchPath}");
-                
-                // 更新托盘提示
-                _trayIconManager.UpdateTrayTooltip();
+                StartMonitoring();
                 
                 // 启动Windows消息循环
                 Application.Run();
@@ -109,6 +92,32 @@ namespace TrayApp
                 MessageBox.Show($"应用启动失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Stop();
             }
+        }
+
+        /// <summary>
+        /// 开始监视文件夹
+        /// </summary>
+        private void StartMonitoring()
+        {
+            // 获取配置的监视路径
+            _watchPath = _configurationService.GetWatchPath();
+            
+            // 确保监视目录存在
+            if (!System.IO.Directory.Exists(_watchPath))
+            {
+                _logger.Warning($"监视目录不存在，创建目录: {_watchPath}");
+                System.IO.Directory.CreateDirectory(_watchPath);
+            }
+
+            // 启动文件夹监视
+            var fileTypes = _configurationService.GetMonitoredFileTypes();
+            var batchTimeout = _configurationService.GetBatchTimeoutSeconds();
+            
+            _folderMonitor.StartMonitoring(_watchPath, batchTimeout, fileTypes);
+            _logger.Info($"应用已启动，正在监视目录: {_watchPath}");
+            
+            // 更新托盘提示
+            _trayIconManager.UpdateTrayTooltip();
         }
 
         /// <summary>
@@ -217,6 +226,31 @@ namespace TrayApp
         private void OnExitRequested(object sender, EventArgs e)
         {
             Stop();
+        }
+
+        /// <summary>
+        /// 处理配置更新事件
+        /// </summary>
+        private void OnConfigurationUpdated(object sender, EventArgs e)
+        {
+            try
+            {
+                _logger.Info("配置已更新，重新启动监视服务");
+                
+                // 停止当前监视
+                _folderMonitor.StopMonitoring();
+                
+                // 重新启动监视
+                StartMonitoring();
+                
+                _logger.Info("监视服务已重新启动");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("重新启动监视服务失败", ex);
+                MessageBox.Show("配置更新后重新启动监视服务失败，请重启应用程序", "警告", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         /// <summary>

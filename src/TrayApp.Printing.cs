@@ -1,25 +1,28 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using TrayApp.Core;
-using iTextSharp.text.pdf;
+using TrayApp.Printing.Core;
+using TrayApp.Printing.Engines;
+using TrayApp.Printing.Converters;
 
 namespace TrayApp.Printing
 {
     /// <summary>
-    /// 外部程序打印管理器，实现IPrintManager接口
-    /// 支持调用外部应用程序打印文件，并计算打印页码
+    /// 新一代统一打印管理器
+    /// 核心理念：所有文件先转换为PDF，然后通过统一的PDF打印引擎输出
     /// </summary>
-    public class ExternalPrintManager : IPrintManager
+    public class UnifiedPrintManager : IPrintManager, IDisposable
     {
         private readonly IConfigurationService _configurationService;
         private readonly ILogger _logger;
-        private readonly Dictionary<string, IPageCounter> _pageCounters = new Dictionary<string, IPageCounter>();
+        private readonly IPdfPrintEngine _pdfPrintEngine;
+        private readonly IConverterFactory _converterFactory;
         private readonly Dictionary<string, int> _printerUsageCount = new Dictionary<string, int>();
+        private bool _disposed = false;
 
         /// <summary>
         /// 当打印完成时触发
@@ -27,34 +30,52 @@ namespace TrayApp.Printing
         public event EventHandler<PrintCompletedEventArgs>? PrintCompleted;
 
         /// <summary>
-        /// 初始化ExternalPrintManager实例
+        /// 初始化统一打印管理器
         /// </summary>
-        /// <param name="configurationService">配置服务</param>
-        /// <param name="logger">日志服务</param>
-        public ExternalPrintManager(IConfigurationService configurationService, ILogger logger)
+        public UnifiedPrintManager(IConfigurationService configurationService, ILogger logger)
         {
             _configurationService = configurationService ?? throw new ArgumentNullException(nameof(configurationService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            
-            // 注册页码计数器
-            RegisterPageCounters();
+
+            // 初始化核心组件
+            _pdfPrintEngine = new PdfiumPrintEngine(_logger);
+            _converterFactory = new ConverterFactory(_logger);
+
+            // 注册所有转换器
+            RegisterConverters();
+
+            _logger.Info("统一打印管理器已初始化");
         }
 
         /// <summary>
-        /// 注册所有页码计数器
+        /// 注册所有文件转换器
         /// </summary>
-        private void RegisterPageCounters()
+        private void RegisterConverters()
         {
-            _pageCounters.Add("PdfPageCounter", new PdfPageCounter(_logger));
-            _pageCounters.Add("WordPageCounter", new WordPageCounter(_logger));
-            _pageCounters.Add("ImagePageCounter", new ImagePageCounter(_logger));
-            _logger.Info($"已注册 {_pageCounters.Count} 种文件页码计数器");
+            try
+            {
+                // 注册PDF转换器（直通）
+                _converterFactory.RegisterConverter(new PdfConverter(_logger));
+
+                // 注册图片转换器
+                _converterFactory.RegisterConverter(new ImageToPdfConverter(_logger));
+
+                // 注册Word转换器
+                _converterFactory.RegisterConverter(new WordToPdfConverter(_logger));
+
+                var supportedExtensions = _converterFactory.GetSupportedExtensions().ToList();
+                _logger.Info($"已注册文件转换器，支持格式: {string.Join(", ", supportedExtensions)}");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error("注册文件转换器失败", ex);
+                throw;
+            }
         }
 
         /// <summary>
         /// 获取可用打印机列表（排除配置中隐藏的打印机）
         /// </summary>
-        /// <returns>打印机名称列表</returns>
         public List<string> GetAvailablePrinters()
         {
             var hiddenPrinters = _configurationService.GetHiddenPrinters();
@@ -94,9 +115,8 @@ namespace TrayApp.Printing
 
         /// <summary>
         /// 计算文件总页码
+        /// 使用新的转换器架构计算页数
         /// </summary>
-        /// <param name="filePaths">文件路径列表</param>
-        /// <returns>总页码</returns>
         public int CalculateTotalPages(IEnumerable<string> filePaths)
         {
             if (filePaths == null) throw new ArgumentNullException(nameof(filePaths));
@@ -108,26 +128,18 @@ namespace TrayApp.Printing
                 try
                 {
                     var extension = Path.GetExtension(filePath).ToLower();
-                    var association = _configurationService.GetFileTypeAssociation(extension);
+                    var converter = _converterFactory.GetConverter(extension);
 
-                    if (association == null || string.IsNullOrEmpty(association.PageCounterType))
+                    if (converter == null)
                     {
-                        _logger.Warning($"未找到 {extension} 文件的页码计数器配置，默认按1页计算");
+                        _logger.Warning($"不支持的文件类型: {extension}，默认按1页计算");
                         totalPages += 1;
                         continue;
                     }
 
-                    if (_pageCounters.TryGetValue(association.PageCounterType, out var counter))
-                    {
-                        int pages = counter.CountPages(filePath);
-                        _logger.Info($"文件 {Path.GetFileName(filePath)} 页码: {pages}");
-                        totalPages += pages;
-                    }
-                    else
-                    {
-                        _logger.Warning($"未找到页码计数器: {association.PageCounterType}，默认按1页计算");
-                        totalPages += 1;
-                    }
+                    int pages = converter.CountPages(filePath);
+                    _logger.Info($"文件 {Path.GetFileName(filePath)} 页码: {pages}");
+                    totalPages += pages;
                 }
                 catch (Exception ex)
                 {
@@ -141,9 +153,8 @@ namespace TrayApp.Printing
 
         /// <summary>
         /// 打印文件列表
+        /// 新架构：转换为PDF后统一打印
         /// </summary>
-        /// <param name="filePaths">文件路径列表</param>
-        /// <param name="printerName">目标打印机名称</param>
         public void PrintFiles(IEnumerable<string> filePaths, string printerName)
         {
             if (filePaths == null) throw new ArgumentNullException(nameof(filePaths));
@@ -156,49 +167,64 @@ namespace TrayApp.Printing
                 return;
             }
 
+            var startTime = DateTime.Now;
+            var successfulFiles = new List<string>();
+            var failedFiles = new List<string>();
+            int totalPages = 0;
+
             try
             {
-                _logger.Info($"开始打印 {fileList.Count} 个文件到打印机: {printerName}");
+                _logger.Info($"开始统一打印流程: {fileList.Count} 个文件到打印机 {printerName}");
                 
                 // 更新打印机使用次数
                 UpdatePrinterUsageCount(printerName);
 
-                // 计算总页码
-                int totalPages = CalculateTotalPages(fileList);
-
-                // 逐个打印文件
+                // 逐个处理文件：转换 -> 打印
                 foreach (var filePath in fileList)
                 {
                     if (!File.Exists(filePath))
                     {
                         _logger.Error($"文件不存在: {filePath}");
+                        failedFiles.Add(filePath);
                         continue;
                     }
 
-                    if (!PrintFile(filePath, printerName))
+                    var result = ProcessAndPrintFile(filePath, printerName);
+                    if (result.success)
                     {
-                        _logger.Error($"文件打印失败: {filePath}");
+                        successfulFiles.Add(filePath);
+                        totalPages += result.pages;
+                        _logger.Info($"文件打印成功: {Path.GetFileName(filePath)} ({result.pages}页)");
+                    }
+                    else
+                    {
+                        failedFiles.Add(filePath);
+                        _logger.Error($"文件打印失败: {Path.GetFileName(filePath)}");
                     }
                 }
 
-                _logger.Info($"所有文件打印完成，总页码: {totalPages}");
-                
+                var duration = DateTime.Now - startTime;
+                var isFullSuccess = failedFiles.Count == 0;
+
+                _logger.Info($"打印流程完成 - 成功: {successfulFiles.Count}, 失败: {failedFiles.Count}, " +
+                           $"总页数: {totalPages}, 耗时: {duration.TotalSeconds:F1}秒");
+
                 // 触发打印完成事件
                 PrintCompleted?.Invoke(this, new PrintCompletedEventArgs
                 {
-                    Success = true,
-                    FilePaths = fileList,
+                    Success = isFullSuccess,
+                    FilePaths = successfulFiles, // 只返回成功的文件
                     PrinterName = printerName,
                     TotalPages = totalPages
                 });
             }
             catch (Exception ex)
             {
-                _logger.Error("批量打印失败", ex);
+                _logger.Error("批量打印过程发生异常", ex);
                 PrintCompleted?.Invoke(this, new PrintCompletedEventArgs
                 {
                     Success = false,
-                    FilePaths = fileList,
+                    FilePaths = new List<string>(),
                     PrinterName = printerName,
                     TotalPages = 0
                 });
@@ -206,90 +232,63 @@ namespace TrayApp.Printing
         }
 
         /// <summary>
-        /// 打印单个文件
+        /// 处理并打印单个文件
+        /// 核心流程：文件 -> 转换器 -> PDF流 -> PDF打印引擎 -> 打印机
         /// </summary>
-        /// <param name="filePath">文件路径</param>
-        /// <param name="printerName">打印机名称</param>
-        /// <returns>打印是否成功</returns>
-        private bool PrintFile(string filePath, string printerName)
+        private (bool success, int pages) ProcessAndPrintFile(string filePath, string printerName)
         {
+            Stream? pdfStream = null;
+            
             try
             {
                 var extension = Path.GetExtension(filePath).ToLower();
-                var association = _configurationService.GetFileTypeAssociation(extension);
+                var converter = _converterFactory.GetConverter(extension);
 
-                if (association == null)
+                if (converter == null)
                 {
-                    _logger.Error($"未找到 {extension} 文件类型的打印配置");
-                    return false;
+                    _logger.Error($"不支持的文件类型: {extension}");
+                    return (false, 0);
                 }
 
-                if (!File.Exists(association.ExecutorPath))
+                _logger.Debug($"开始处理文件: {Path.GetFileName(filePath)} (类型: {extension})");
+
+                // 第一步：转换为PDF流
+                pdfStream = converter.ConvertToPdfStream(filePath);
+                
+                if (pdfStream == null || pdfStream.Length == 0)
                 {
-                    _logger.Error($"打印程序不存在: {association.ExecutorPath}");
-                    return false;
+                    _logger.Error($"文件转换为PDF失败: {filePath}");
+                    return (false, 0);
                 }
 
-                // 替换参数占位符
-                var arguments = association.Arguments
-                    .Replace("{FilePath}", $"\"{filePath}\"", StringComparison.OrdinalIgnoreCase)
-                    .Replace("{PrinterName}", $"\"{printerName}\"", StringComparison.OrdinalIgnoreCase);
+                _logger.Debug($"文件转换为PDF成功: {Path.GetFileName(filePath)}, PDF大小: {pdfStream.Length} bytes");
 
-                _logger.Info($"执行打印命令: {association.ExecutorPath} {arguments}");
+                // 第二步：计算页数
+                int pages = converter.CountPages(filePath);
 
-                // 启动外部打印程序
-                var processStartInfo = new ProcessStartInfo
+                // 第三步：使用PDF打印引擎打印
+                bool printSuccess = _pdfPrintEngine.PrintPdf(pdfStream, printerName);
+
+                if (printSuccess)
                 {
-                    FileName = association.ExecutorPath,
-                    Arguments = arguments,
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-
-                using (var process = new Process { StartInfo = processStartInfo })
-                {
-                    process.Start();
-                    
-                    // 读取输出（防止进程阻塞）
-                    var outputTask = process.StandardOutput.ReadToEndAsync();
-                    var errorTask = process.StandardError.ReadToEndAsync();
-                    
-                    // 等待进程完成，设置超时时间（5分钟）
-                    if (process.WaitForExit(300000)) // 5分钟 = 300,000毫秒
-                    {
-                        var exitCode = process.ExitCode;
-                        var output = outputTask.Result;
-                        var error = errorTask.Result;
-
-                        if (!string.IsNullOrEmpty(output))
-                            _logger.Debug($"打印程序输出: {output}");
-                        
-                        if (exitCode == 0)
-                        {
-                            _logger.Info($"文件打印成功: {Path.GetFileName(filePath)}");
-                            return true;
-                        }
-                        else
-                        {
-                            _logger.Error($"打印程序退出代码: {exitCode}, 错误输出: {error}");
-                        }
-                    }
-                    else
-                    {
-                        // 超时，终止进程
-                        process.Kill();
-                        _logger.Error($"打印超时，已终止进程: {association.ExecutorPath}");
-                    }
+                    _logger.Debug($"PDF打印成功: {Path.GetFileName(filePath)}");
+                    return (true, pages);
                 }
-
-                return false;
+                else
+                {
+                    _logger.Error($"PDF打印失败: {Path.GetFileName(filePath)}");
+                    return (false, 0);
+                }
             }
             catch (Exception ex)
             {
-                _logger.Error($"打印文件失败: {filePath}", ex);
-                return false;
+                _logger.Error($"处理文件时发生异常: {filePath}", ex);
+                return (false, 0);
+            }
+            finally
+            {
+                // 释放PDF流资源
+                pdfStream?.Dispose();
             }
         }
 
@@ -307,130 +306,47 @@ namespace TrayApp.Printing
                 _printerUsageCount[printerName] = 1;
             }
         }
-    }
 
-    #region 页码计数器实现
-
-    /// <summary>
-    /// 页码计数器接口
-    /// </summary>
-    public interface IPageCounter
-    {
-        int CountPages(string filePath);
-    }
-
-    /// <summary>
-    /// PDF页码计数器
-    /// </summary>
-    public class PdfPageCounter : IPageCounter
-    {
-        private readonly ILogger _logger;
-
-        public PdfPageCounter(ILogger logger)
+        /// <summary>
+        /// 获取支持的文件类型
+        /// </summary>
+        public IEnumerable<string> GetSupportedFileTypes()
         {
-            _logger = logger;
+            return _converterFactory.GetSupportedExtensions();
         }
 
-        public int CountPages(string filePath)
+        /// <summary>
+        /// 检查文件类型是否支持
+        /// </summary>
+        public bool IsFileTypeSupported(string fileExtension)
         {
-            try
-            {
-                // 使用iTextSharp库读取PDF页码
-                using (var reader = new iTextSharp.text.pdf.PdfReader(filePath))
-                {
-                    return reader.NumberOfPages;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.Error($"获取PDF页码失败: {filePath}", ex);
-                return 1; // 出错时默认按1页计算
-            }
-        }
-    }
-
-    /// <summary>
-    /// Word页码计数器
-    /// </summary>
-    public class WordPageCounter : IPageCounter
-    {
-        private readonly ILogger _logger;
-
-        public WordPageCounter(ILogger logger)
-        {
-            _logger = logger;
+            return _converterFactory.IsSupported(fileExtension);
         }
 
-        public int CountPages(string filePath)
+        public void Dispose()
         {
-            Microsoft.Office.Interop.Word.Application? wordApp = null;
-            Microsoft.Office.Interop.Word.Document? doc = null;
-            
-            try
-            {
-                // 使用Microsoft.Office.Interop.Word库
-                wordApp = new Microsoft.Office.Interop.Word.Application();
-                wordApp.Visible = false;
-                wordApp.DisplayAlerts = Microsoft.Office.Interop.Word.WdAlertLevel.wdAlertsNone;
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-                doc = wordApp.Documents.Open(
-                    FileName: filePath,
-                    ReadOnly: true
-                );
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed) return;
 
-                int pages = doc.ComputeStatistics(Microsoft.Office.Interop.Word.WdStatistic.wdStatisticPages);
-                return pages;
-            }
-            catch (Exception ex)
+            if (disposing)
             {
-                _logger.Error($"获取Word页码失败: {filePath}", ex);
-                return 1; // 出错时默认按1页计算
-            }
-            finally
-            {
-                // 正确释放COM对象
                 try
                 {
-                    doc?.Close(false);
-                    wordApp?.Quit(false);
-                    
-                    if (doc != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(doc);
-                    if (wordApp != null) System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
+                    _pdfPrintEngine?.Dispose();
+                    _logger?.Info("统一打印管理器已释放");
                 }
                 catch (Exception ex)
                 {
-                    _logger.Error("释放Word COM对象失败", ex);
+                    _logger?.Error("释放打印管理器资源时发生错误", ex);
                 }
             }
+
+            _disposed = true;
         }
     }
-
-    /// <summary>
-    /// 图片页码计数器（默认为1页）
-    /// </summary>
-    public class ImagePageCounter : IPageCounter
-    {
-        private readonly ILogger _logger;
-
-        public ImagePageCounter(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public int CountPages(string filePath)
-        {
-            try
-            {
-                // 图片文件默认按1页计算
-                return 1;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error($"获取图片页码失败: {filePath}", ex);
-                return 1;
-            }
-        }
-    }
-
-    #endregion
 }

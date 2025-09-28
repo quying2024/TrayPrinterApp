@@ -11,7 +11,7 @@ namespace TrayApp.Core
     {
         public MonitoringSettings Monitoring { get; set; } = new MonitoringSettings();
         public PrinterManagementSettings PrinterManagement { get; set; } = new PrinterManagementSettings();
-        public Dictionary<string, FileTypeAssociation> FileTypeAssociations { get; set; } = new Dictionary<string, FileTypeAssociation>();
+        public PrintSettings PrintSettings { get; set; } = new PrintSettings();
         public TaskHistorySettings TaskHistory { get; set; } = new TaskHistorySettings();
         public LoggingSettings Logging { get; set; } = new LoggingSettings();
     }
@@ -29,11 +29,15 @@ namespace TrayApp.Core
         public string DisplayOrder { get; set; } = "UsageFrequency";
     }
 
-    public class FileTypeAssociation
+    /// <summary>
+    /// 新的统一打印设置
+    /// </summary>
+    public class PrintSettings
     {
-        public string ExecutorPath { get; set; } = string.Empty;
-        public string Arguments { get; set; } = string.Empty;
-        public string PageCounterType { get; set; } = string.Empty;
+        public int DefaultCopies { get; set; } = 1;
+        public bool FitToPage { get; set; } = true;
+        public bool KeepAspectRatio { get; set; } = true;
+        public int DefaultDpi { get; set; } = 300;
     }
 
     public class TaskHistorySettings
@@ -59,8 +63,8 @@ namespace TrayApp.Core
         int GetBatchTimeoutSeconds();
         List<string> GetMonitoredFileTypes();
         List<string> GetHiddenPrinters();
-        FileTypeAssociation? GetFileTypeAssociation(string fileExtension);
         TaskHistorySettings GetTaskHistorySettings();
+        PrintSettings GetPrintSettings();
     }
 
     /// <summary>

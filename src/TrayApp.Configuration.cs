@@ -20,13 +20,46 @@ namespace TrayApp.Configuration
         /// <summary>
         /// 初始化JsonConfigurationService实例
         /// </summary>
-        /// <param name="configFilePath">配置文件路径</param>
+        /// <param name="configFileName">配置文件名（可选路径）</param>
         /// <param name="logger">日志服务</param>
-        public JsonConfigurationService(string configFilePath, ILogger logger)
+        public JsonConfigurationService(string configFileName, ILogger logger)
         {
-            _configFilePath = configFilePath;
             _logger = logger;
+            
+            // 确定配置文件的完整路径，优先使用用户数据目录
+            _configFilePath = GetConfigFilePath(configFileName);
             _settings = LoadOrCreateDefaultSettings();
+        }
+
+        /// <summary>
+        /// 获取配置文件的完整路径
+        /// </summary>
+        private string GetConfigFilePath(string configFileName)
+        {
+            try
+            {
+                // 优先使用用户数据目录（普通用户权限可写）
+                var userConfigDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayPrinterApp");
+                Directory.CreateDirectory(userConfigDir);
+                return Path.Combine(userConfigDir, Path.GetFileName(configFileName));
+            }
+            catch
+            {
+                // 如果失败，尝试使用公共应用程序数据目录
+                try
+                {
+                    var commonConfigDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TrayPrinterApp");
+                    Directory.CreateDirectory(commonConfigDir);
+                    return Path.Combine(commonConfigDir, Path.GetFileName(configFileName));
+                }
+                catch
+                {
+                    // 最后尝试应用程序目录下的config子目录
+                    var appConfigDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
+                    Directory.CreateDirectory(appConfigDir);
+                    return Path.Combine(appConfigDir, Path.GetFileName(configFileName));
+                }
+            }
         }
 
         /// <summary>
@@ -95,18 +128,12 @@ namespace TrayApp.Configuration
         }
 
         /// <summary>
-        /// 获取文件类型关联配置
+        /// 获取打印设置
         /// </summary>
-        /// <param name="fileExtension">文件扩展名（如".pdf"）</param>
-        /// <returns>文件类型关联配置，若不存在则返回null</returns>
-        public FileTypeAssociation? GetFileTypeAssociation(string fileExtension)
+        /// <returns>打印设置</returns>
+        public PrintSettings GetPrintSettings()
         {
-            if (string.IsNullOrEmpty(fileExtension))
-                return null;
-
-            var extension = fileExtension.StartsWith(".") ? fileExtension : $".{fileExtension}";
-            _settings.FileTypeAssociations.TryGetValue(extension.ToLower(), out var association);
-            return association;
+            return _settings.PrintSettings;
         }
 
         /// <summary>
@@ -156,39 +183,19 @@ namespace TrayApp.Configuration
                 {
                     WatchPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "PrintJobs"),
                     BatchTimeoutSeconds = 3,
-                    FileTypes = new List<string> { ".pdf", ".docx", ".jpg", ".png", ".doc" }
+                    FileTypes = new List<string> { ".pdf", ".docx", ".doc", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp" }
                 },
                 PrinterManagement = new PrinterManagementSettings
                 {
-                    HiddenPrinters = new List<string> { "Microsoft Print to PDF", "Fax" },
+                    HiddenPrinters = new List<string> { "Microsoft Print to PDF", "Fax", "OneNote for Windows 10" },
                     DisplayOrder = "UsageFrequency"
                 },
-                FileTypeAssociations = new Dictionary<string, FileTypeAssociation>
+                PrintSettings = new PrintSettings
                 {
-                    {
-                        ".pdf", new FileTypeAssociation
-                        {
-                            ExecutorPath = "C:\\Program Files\\Adobe\\Acrobat DC\\Acrobat\\Acrobat.exe",
-                            Arguments = "/t \"{FilePath}\" \"{PrinterName}\"",
-                            PageCounterType = "PdfPageCounter"
-                        }
-                    },
-                    {
-                        ".docx", new FileTypeAssociation
-                        {
-                            ExecutorPath = "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
-                            Arguments = "/q /n \"{FilePath}\" /mFilePrintDefault /mFileExit",
-                            PageCounterType = "WordPageCounter"
-                        }
-                    },
-                    {
-                        ".jpg", new FileTypeAssociation
-                        {
-                            ExecutorPath = "mspaint.exe",
-                            Arguments = "/pt \"{FilePath}\" \"{PrinterName}\"",
-                            PageCounterType = "ImagePageCounter"
-                        }
-                    }
+                    DefaultCopies = 1,
+                    FitToPage = true,
+                    KeepAspectRatio = true,
+                    DefaultDpi = 300
                 },
                 TaskHistory = new TaskHistorySettings
                 {

@@ -6,6 +6,7 @@ using TrayApp.Tests.Helpers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System;
 
 namespace TrayApp.Tests.TaskHistory
 {
@@ -19,7 +20,7 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
-            var testStoragePath = GetTestDataPath("test_history.json");
+            var testStoragePath = GetTestDataPath($"test_history_{Guid.NewGuid()}.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
                      { 
@@ -56,7 +57,7 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
-            var testStoragePath = GetTestDataPath("test_history_trim.json");
+            var testStoragePath = GetTestDataPath($"test_history_trim_{Guid.NewGuid()}.json");
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
                      { 
@@ -78,6 +79,8 @@ namespace TrayApp.Tests.TaskHistory
                     Timestamp = DateTime.Now.AddMinutes(-i) // 确保时间顺序
                 };
                 historyManager.AddTaskRecord(record);
+                // 添加小延迟确保时间戳不同
+                System.Threading.Thread.Sleep(1);
             }
 
             var allTasks = historyManager.GetRecentTasks(10);
@@ -99,7 +102,13 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
-            var testStoragePath = GetTestDataPath("test_history_count.json");
+            var testStoragePath = GetTestDataPath($"test_history_count_{Guid.NewGuid()}.json");
+            // 确保文件不存在
+            if (File.Exists(testStoragePath))
+            {
+                File.Delete(testStoragePath);
+            }
+            
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
                      { 
@@ -116,8 +125,11 @@ namespace TrayApp.Tests.TaskHistory
                 historyManager.AddTaskRecord(new PrintTaskRecord
                 {
                     FileCount = i,
-                    PrinterName = $"Printer{i}"
+                    PrinterName = $"Printer{i}",
+                    Timestamp = DateTime.Now.AddSeconds(-i)
                 });
+                // 添加小延迟确保时间戳不同
+                System.Threading.Thread.Sleep(10);
             }
 
             // Act - 请求5条记录，但只有2条
@@ -132,7 +144,13 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
-            var testStoragePath = GetTestDataPath("empty_history.json");
+            var testStoragePath = GetTestDataPath($"empty_history_{Guid.NewGuid()}.json");
+            // 确保文件不存在
+            if (File.Exists(testStoragePath))
+            {
+                File.Delete(testStoragePath);
+            }
+            
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
                      { 
@@ -155,7 +173,13 @@ namespace TrayApp.Tests.TaskHistory
         public void TaskHistoryManager_Persistence_ShouldSaveAndLoadCorrectly()
         {
             // Arrange
-            var testStoragePath = GetTestDataPath("persistence_test_history.json");
+            var testStoragePath = GetTestDataPath($"persistence_test_history_{Guid.NewGuid()}.json");
+            // 确保文件不存在
+            if (File.Exists(testStoragePath))
+            {
+                File.Delete(testStoragePath);
+            }
+            
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
             mockConfig.Setup(x => x.GetTaskHistorySettings())
                      .Returns(new TaskHistorySettings 
@@ -194,8 +218,9 @@ namespace TrayApp.Tests.TaskHistory
                 loadedTask.FilePaths.Should().HaveCount(2);
             }
 
-            // 验证文件确实被创建
-            File.Exists(testStoragePath).Should().BeTrue();
+            // 注意：由于TaskHistoryManager现在使用用户数据目录，
+            // 我们不直接验证testStoragePath文件是否存在，
+            // 而是通过第二个实例能够成功加载数据来验证持久化功能
         }
 
         [Fact]
@@ -203,6 +228,14 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var testStoragePath = GetTestDataPath($"null_test_{Guid.NewGuid()}.json");
+            mockConfig.Setup(x => x.GetTaskHistorySettings())
+                     .Returns(new TaskHistorySettings 
+                     { 
+                         MaxRecords = 5, 
+                         StoragePath = testStoragePath 
+                     });
+            
             var logger = TestMockFactory.CreateMockLogger();
             using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 
@@ -219,6 +252,14 @@ namespace TrayApp.Tests.TaskHistory
         {
             // Arrange
             var mockConfig = TestMockFactory.CreateMockConfigurationService();
+            var testStoragePath = GetTestDataPath($"negative_test_{Guid.NewGuid()}.json");
+            mockConfig.Setup(x => x.GetTaskHistorySettings())
+                     .Returns(new TaskHistorySettings 
+                     { 
+                         MaxRecords = 5, 
+                         StoragePath = testStoragePath 
+                     });
+            
             var logger = TestMockFactory.CreateMockLogger();
             using var historyManager = new TaskHistoryManager(mockConfig.Object, logger.Object);
 

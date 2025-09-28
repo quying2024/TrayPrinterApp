@@ -22,5 +22,6 @@
   </ImportGroup>
   <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <Pkgxunit_analyzers Condition=" '$(Pkgxunit_analyzers)' == '' ">C:\Users\quying\.nuget\packages\xunit.analyzers\1.6.0</Pkgxunit_analyzers>
+    <PkgPdfiumViewer Condition=" '$(PkgPdfiumViewer)' == '' ">C:\Users\quying\.nuget\packages\pdfiumviewer\2.13.0</PkgPdfiumViewer>
   </PropertyGroup>
 </Project>

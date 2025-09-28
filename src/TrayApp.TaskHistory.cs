@@ -45,7 +45,9 @@ namespace TrayApp.TaskHistory
         {
             var settings = _configurationService.GetTaskHistorySettings();
             _maxRecords = settings.MaxRecords;
-            _storagePath = settings.StoragePath;
+            
+            // 确保历史记录文件保存在用户数据目录
+            _storagePath = GetUserDataPath(settings.StoragePath);
             
             if (_maxRecords < 1)
             {
@@ -54,6 +56,35 @@ namespace TrayApp.TaskHistory
             }
             
             _logger.Info($"任务历史配置: 最大记录数={_maxRecords}, 存储路径={_storagePath}");
+        }
+
+        /// <summary>
+        /// 获取用户数据目录中的文件路径
+        /// </summary>
+        private string GetUserDataPath(string fileName)
+        {
+            try
+            {
+                // 优先使用用户数据目录（普通用户权限可写）
+                var userDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TrayPrinterApp");
+                Directory.CreateDirectory(userDataDir);
+                return Path.Combine(userDataDir, Path.GetFileName(fileName));
+            }
+            catch
+            {
+                // 如果失败，尝试使用公共应用程序数据目录
+                try
+                {
+                    var commonDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "TrayPrinterApp");
+                    Directory.CreateDirectory(commonDataDir);
+                    return Path.Combine(commonDataDir, Path.GetFileName(fileName));
+                }
+                catch
+                {
+                    // 最后尝试应用程序目录
+                    return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, Path.GetFileName(fileName));
+                }
+            }
         }
 
         /// <summary>

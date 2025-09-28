@@ -58,9 +58,21 @@
               "target": "Package",
               "version": "[13.0.3, )"
             },
-            "iTextSharp": {
+            "PDFsharp": {
               "target": "Package",
-              "version": "[5.5.13.3, )"
+              "version": "[6.2.2, )"
+            },
+            "PdfiumViewer": {
+              "target": "Package",
+              "version": "[2.13.0, )"
+            },
+            "SkiaSharp": {
+              "target": "Package",
+              "version": "[3.119.1, )"
+            },
+            "itext7": {
+              "target": "Package",
+              "version": "[8.0.5, )"
             }
           },
           "imports": [
