@@ -25,3 +25,21 @@ TestResults/
 # Rider/VS Code (optional)
 .idea/
 .vscode/
+
+# Ignore publish output and setup application folder containing large binaries
+/publish/
+/TrayPrinterApp.Setup/ApplicationFolder/
+
+# Ignore Visual Studio build outputs
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+
+# Ignore NuGet packages
+*.nupkg
+packages/
+
+# Logs
+*.log
