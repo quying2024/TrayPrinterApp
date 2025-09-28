@@ -46,36 +46,35 @@ foreach ($f in $files) {
     $index++
     $compId = "cmp$index"
     $fileId = "fil$index"
-    # Wifi requires Source to be an absolute path; escape ampersands and replace backslashes
+    # WiX requires Source to be an absolute path; escape ampersands
     $src = $f.FullName
-    $relPath = $f.FullName.Substring($appDir.Length).TrimStart('\')
     $escapedSrc = $src -replace '&','&amp;'
 
-    $componentEntries.AppendLine("    <Component Id=\"$compId\" Guid=\"*\">") | Out-Null
-    $componentEntries.AppendLine("      <File Id=\"$fileId\" Source=\"$escapedSrc\" KeyPath=\"yes\" />") | Out-Null
-    $componentEntries.AppendLine("    </Component>") | Out-Null
+    $componentEntries.AppendLine('    <Component Id="' + $compId + '" Guid="*">') | Out-Null
+    $componentEntries.AppendLine('      <File Id="' + $fileId + '" Source="' + $escapedSrc + '" KeyPath="yes" />') | Out-Null
+    $componentEntries.AppendLine('    </Component>') | Out-Null
 
-    $componentRefs.AppendLine("      <ComponentRef Id=\"$compId\" />") | Out-Null
+    $componentRefs.AppendLine('      <ComponentRef Id="' + $compId + '" />') | Out-Null
 }
 
 $wxsContent = @"
-<?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="$productName" Language="1033" Version="$productVersion" Manufacturer="$manufacturer" UpgradeCode="$upgradeGuid">
-    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine"/>
+<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<Wix xmlns=\"http://schemas.microsoft.com/wix/2006/wi\">
+  <Product Id=\"*\" Name=\"$productName\" Language=\"1033\" Version=\"$productVersion\" Manufacturer=\"$manufacturer\" UpgradeCode=\"$upgradeGuid\">
+    <Package InstallerVersion=\"500\" Compressed=\"yes\" InstallScope=\"perMachine\"/>
     <MediaTemplate/>
 
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="$productName" />
+    <Directory Id=\"TARGETDIR\" Name=\"SourceDir\">
+      <Directory Id=\"ProgramFiles64Folder\">
+        <Directory Id=\"INSTALLFOLDER\" Name=\"$productName\" />
       </Directory>
     </Directory>
 
-    <DirectoryRef Id="INSTALLFOLDER">
+    <DirectoryRef Id=\"INSTALLFOLDER\">
 $($componentEntries.ToString())
     </DirectoryRef>
 
-    <Feature Id="ProductFeature" Title="$productName" Level="1">
+    <Feature Id=\"ProductFeature\" Title=\"$productName\" Level=\"1\">
 $($componentRefs.ToString())
     </Feature>
   </Product>
