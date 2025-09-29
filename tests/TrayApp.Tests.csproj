@@ -35,4 +35,11 @@
     <Folder Include="Helpers\" />
   </ItemGroup>
 
+  <!-- 包含测试数据文件 -->
+  <ItemGroup>
+    <None Include="TestData\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
