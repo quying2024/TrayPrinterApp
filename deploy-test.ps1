@@ -1,0 +1,94 @@
+# TrayPrinterApp ??????
+# ??terminal???????????????
+
+Write-Host "?? ?? TrayPrinterApp ????" -ForegroundColor Green
+
+# ??1: ?????????
+Write-Host "?? ??1: ?????..." -ForegroundColor Yellow
+$publishPath = ".\publish\win-x64"
+$deployTestPath = "C:\TrayPrintApp_Test"
+
+if (Test-Path "$publishPath\TrayApp.exe") {
+    Write-Host "? ?????: $publishPath\TrayApp.exe" -ForegroundColor Green
+} else {
+    Write-Host "? ???????????? dotnet publish" -ForegroundColor Red
+    Write-Host "????: dotnet publish src/TrayApp.csproj -c Release -r win-x64 --self-contained -o ./publish/win-x64"
+    exit 1
+}
+
+# ??2: ????????
+Write-Host "?? ??2: ????????..." -ForegroundColor Yellow
+try {
+    if (Test-Path $deployTestPath) {
+        Remove-Item $deployTestPath -Recurse -Force
+        Write-Host "??? ????????" -ForegroundColor Gray
+    }
+    New-Item -ItemType Directory -Path $deployTestPath -Force | Out-Null
+    Write-Host "? ????????: $deployTestPath" -ForegroundColor Green
+} catch {
+    Write-Host "? ????????: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
+
+# ??3: ??????
+Write-Host "?? ??3: ??????..." -ForegroundColor Yellow
+try {
+    Copy-Item -Path "$publishPath\*" -Destination $deployTestPath -Recurse -Force
+    Write-Host "? ????????" -ForegroundColor Green
+} catch {
+    Write-Host "? ??????: $($_.Exception.Message)" -ForegroundColor Red
+    exit 1
+}
+
+# ??4: ????????
+Write-Host "?? ??4: ????????..." -ForegroundColor Yellow
+$testWatchPath = "C:\TrayPrintTest"
+try {
+    if (!(Test-Path $testWatchPath)) {
+        New-Item -ItemType Directory -Path $testWatchPath -Force | Out-Null
+    }
+    Write-Host "? ??????: $testWatchPath" -ForegroundColor Green
+} catch {
+    Write-Host "? ????????: $($_.Exception.Message)" -ForegroundColor Red
+}
+
+# ??5: ??????
+Write-Host "?? ??5: ??????..." -ForegroundColor Yellow
+$requiredFiles = @(
+    "$deployTestPath\TrayApp.exe",
+    "$deployTestPath\TrayApp.dll", 
+    "$deployTestPath\config\appsettings.json"
+)
+
+$allFilesExist = $true
+foreach ($file in $requiredFiles) {
+    if (Test-Path $file) {
+        Write-Host "? $file" -ForegroundColor Green
+    } else {
+        Write-Host "? ????: $file" -ForegroundColor Red
+        $allFilesExist = $false
+    }
+}
+
+if ($allFilesExist) {
+    Write-Host "?? ?????????" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "?? ????: $deployTestPath" -ForegroundColor Cyan
+    Write-Host "?? ????: $testWatchPath" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "?? ???????:" -ForegroundColor Yellow
+    Write-Host "1. ????: $deployTestPath\TrayApp.exe" -ForegroundColor Gray
+    Write-Host "2. ??????????" -ForegroundColor Gray
+    Write-Host "3. ? $testWatchPath ??????" -ForegroundColor Gray
+    Write-Host "4. ???????????" -ForegroundColor Gray
+} else {
+    Write-Host "? ?????????????????" -ForegroundColor Red
+    exit 1
+}
+
+# ??6: ??????
+Write-Host ""
+Write-Host "?? ??????:" -ForegroundColor Cyan
+Write-Host "OS: $(Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption)"
+Write-Host ".NET: $((Get-Command dotnet -ErrorAction SilentlyContinue).FileVersionInfo.ProductVersion)"
+Write-Host "PowerShell: $($PSVersionTable.PSVersion)"

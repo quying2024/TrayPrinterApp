@@ -7,17 +7,27 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="itext7" Version="8.0.5" />
     <PackageReference Include="Microsoft.Office.Interop.Word" Version="15.0.4797.1004" />
-    <!-- Use PdfiumViewer.Core for .NET 8 compatibility -->
-    <PackageReference Include="PdfiumViewer.Core" Version="1.0.0" />
+    <!-- 使用包含原生库的PdfiumViewer包 -->
+    <PackageReference Include="PdfiumViewer" Version="2.13.0" />
     <PackageReference Include="PDFsharp" Version="6.2.2" />
     <PackageReference Include="SkiaSharp" Version="3.119.1" />
     <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- 确保原生DLL被复制到输出目录 -->
+  <ItemGroup>
+    <Content Include="$(NuGetPackageRoot)pdfiumviewer\2.13.0\runtimes\win-x64\native\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
   </ItemGroup>
 
   <!-- Include config files -->

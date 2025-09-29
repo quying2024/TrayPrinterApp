@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TrayApp.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fcbab0fc0b1270de03810f82bdc07bd7b0f6f534")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5fd6f0dd478e27102c66debfb1839d0cb6122517")]
 [assembly: System.Reflection.AssemblyProductAttribute("TrayApp.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TrayApp.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
